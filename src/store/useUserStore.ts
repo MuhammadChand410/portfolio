@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 export interface User {
   email: string;
   name?: string; // optional
-  role?:string
+  role?: string
 }
 
 // Define the store state

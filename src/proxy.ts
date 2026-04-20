@@ -7,7 +7,7 @@ const User_Roles: Record<string, string[]> = {
   content_creator: ["/admin/projects", "/admin/testimonials"],
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   const role = request.cookies.get('role')?.value
   const { pathname } = request.nextUrl
@@ -39,10 +39,10 @@ export function middleware(request: NextRequest) {
     const allowedPaths = User_Roles[role]
     const isAllowed = allowedPaths.some((route) => pathname.startsWith(route))
 
-    if (!isAllowed && role ==='content_creator') {
+    if (!isAllowed && role === 'content_creator') {
       return NextResponse.redirect(new URL('/admin/projects', request.url))
     }
-    if (!isAllowed && role ==='support_staff') {
+    if (!isAllowed && role === 'support_staff') {
       return NextResponse.redirect(new URL('/admin/contact-queries', request.url))
     }
   }

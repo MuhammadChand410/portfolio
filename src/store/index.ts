@@ -7,4 +7,4 @@ export { useThemeStore } from "./useThemeStore";
 export type { Project } from "./useProjectStore";
 export type { Testimonial } from "./useTestimonialStore";
 export type { ContactQuery } from "./useContactQueryStore";
-export type { Notification, NotificationType } from "./useNotificationStore";
+export type { Notification } from "./useNotificationStore";
