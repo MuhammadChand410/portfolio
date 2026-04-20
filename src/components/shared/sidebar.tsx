@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useUserStore } from "@/src/store/useUserStore";
 import { stat } from "fs";
 
-const User_Roles = {
+const User_Roles: Record<string, string[]> = {
   super_admin: ["/admin/dashboard", "/admin/services", "/admin/projects", "/admin/roles", "/admin/testimonials", "/admin/contact-queries", "/admin/notifications"],
   support_staff: ["/admin/contact-queries", "/admin/notifications"],
   content_creator: ["/admin/services", "/admin/projects", "/admin/testimonials","/admin/notifications"]
@@ -76,7 +76,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const user = useUserStore(state => state.user)
 
-  const AllowedRoutes = navItems.filter((item) => User_Roles[user?.role]?.includes(item.href))
+  const AllowedRoutes = navItems.filter((item) => User_Roles[user?.role ?? ""]?.includes(item.href))
 
   return (
     <aside className={`${collapsed ? "w-16" : "w-60"} sticky top-0 h-screen bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 flex-shrink-0`}>
