@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import FormField from "@/src/components/shared/FormField";
 import ImageDropZone from "@/src/components/shared/ImageDropZone";
 import { useProjectStore, type Project } from "@/src/store/useProjectStore";
 import usePortfolio from "@/src/api/hooks/usePortfolio";
 import { useUserStore } from "@/src/store/useUserStore";
+import { getPortfolios } from "@/src/api/services/portfolio";
 
 type ProjectForm = Omit<Project, "id" | "tech"> & { techInput: string; imageFile?: File };
 
@@ -112,10 +113,24 @@ function ProjectForm({ defaultValues, onSave, onCancel, submitLabel }: {
 }
 
 export default function AdminProjectsView() {
-  const { projects, loading, search, filterStatus, setSearch, setFilterStatus } = useProjectStore();
+  const { projects, loading, search, filterStatus, setSearch, setFilterStatus, setProjects } = useProjectStore();
   const { handleAdd, handleUpdate, handleDelete: apiDelete } = usePortfolio();
   const [modal, setModal] = useState<"add" | "edit" | "view" | "delete" | null>(null);
   const [selected, setSelected] = useState<Project | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const data = await getPortfolios(value || undefined);
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setProjects(raw.map((p: any) => ({
+        ...p,
+        tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
+      })));
+    }, 400);
+  }
 
   const filtered = projects.filter(p => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
@@ -176,7 +191,7 @@ export default function AdminProjectsView() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 flex-1">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..."
+          <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Search projects..."
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-56" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">

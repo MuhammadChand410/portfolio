@@ -27,3 +27,7 @@ export const updatePortfolio = async (id: number, data: Record<string, string | 
 export const deletePortfolio = async (id: number) => {
   await api.delete(API_ENDPOINTS.PORTFOLIO.DELETE(id));
 };
+export const searchPortfolio = async (searchTerm: string) => {
+  const response = await api.get(API_ENDPOINTS.PORTFOLIO.SEARCH(searchTerm));
+  return response.data;
+};

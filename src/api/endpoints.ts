@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
     CREATE: '/portfolio/',
     UPDATE: (id: number) => `/portfolio/${id}/`,
     DELETE: (id: number) => `/portfolio/${id}/`,
+    SEARCH:(searchTerm: string) => `/portfolio/search/?search=${searchTerm}`
   },
   TESTIMONIAL: {
     GET_ALL: '/testimonial/',
