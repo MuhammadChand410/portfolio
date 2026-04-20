@@ -1,8 +1,10 @@
 import api from "../axiosInstance";
 import { API_ENDPOINTS } from "../endpoints";
 
-export const getPortfolios = async () => {
-  const response = await api.get(API_ENDPOINTS.PORTFOLIO.GET_ALL);
+export const getPortfolios = async (search?: string) => {
+  const response = await api.get(API_ENDPOINTS.PORTFOLIO.GET_ALL, {
+    params: search ? { search } : undefined,
+  });
   return response.data;
 };
 
@@ -27,7 +29,4 @@ export const updatePortfolio = async (id: number, data: Record<string, string | 
 export const deletePortfolio = async (id: number) => {
   await api.delete(API_ENDPOINTS.PORTFOLIO.DELETE(id));
 };
-export const searchPortfolio = async (searchTerm: string) => {
-  const response = await api.get(API_ENDPOINTS.PORTFOLIO.SEARCH(searchTerm));
-  return response.data;
-};
+
