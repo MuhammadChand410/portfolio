@@ -24,12 +24,12 @@ function normalize(n: any) {
     title: n.title ?? n.subject ?? "Notification",
     desc: n.message ?? n.description ?? n.body ?? "",
     time: timeAgo(n.created_at),
-    read: n.is_read ?? n.read ?? n.status === "read" ?? false,
+    read: n.is_read ?? n.read ?? (n.status === "read"),
     name: n.name ?? n.sender ?? "",
     email: n.email ?? "",
     subject: n.title ?? n.subject ?? "",
     message: n.message ?? n.description ?? n.body ?? "",
-    status: (n.is_read ?? n.read ?? n.status === "read") ? "read" : "unread",
+    status: (n.is_read ?? n.read ?? (n.status === "read")) ? "read" : "unread",
     created_at: n.created_at,
   };
 }
