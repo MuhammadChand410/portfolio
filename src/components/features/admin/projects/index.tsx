@@ -8,12 +8,13 @@ import { useProjectStore, type Project } from "@/src/store/useProjectStore";
 import usePortfolio from "@/src/api/hooks/usePortfolio";
 import { useUserStore } from "@/src/store/useUserStore";
 import { getPortfolios } from "@/src/api/services/portfolio";
+import Pagination from "@/src/components/shared/Pagination";
 
 type ProjectForm = Omit<Project, "id" | "tech"> & { techInput: string; imageFile?: File };
 
 const STATUS_MAP: Record<string, string> = {
   "Live": "live",
-  "In Progress": "in_progress",
+  "In Progress": "in progress",
   "Archived": "archived",
 };
 
@@ -113,8 +114,8 @@ function ProjectForm({ defaultValues, onSave, onCancel, submitLabel }: {
 }
 
 export default function AdminProjectsView() {
-  const { projects, loading, search, filterStatus, setSearch, setFilterStatus, setProjects } = useProjectStore();
-  const { handleAdd, handleUpdate, handleDelete: apiDelete } = usePortfolio();
+  const { projects, loading, search, filterStatus, setSearch, setFilterStatus, setProjects, pagination } = useProjectStore();
+  const { handleAdd, handleUpdate, handleDelete: apiDelete, fetchProjects } = usePortfolio();
   const [modal, setModal] = useState<"add" | "edit" | "view" | "delete" | null>(null);
   const [selected, setSelected] = useState<Project | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -123,20 +124,26 @@ export default function AdminProjectsView() {
     setSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      const data = await getPortfolios(value || undefined);
+      const data = await getPortfolios(value || undefined, undefined, filterStatus !== "All" ? STATUS_MAP[filterStatus] : undefined);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setProjects(raw.map((p: any) => ({
-        ...p,
-        tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
-      })));
+      setProjects(
+        raw.map((p: any) => ({
+          ...p,
+          tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
+        })),
+        data.pagination ?? undefined
+      );
     }, 400);
   }
 
-  const filtered = projects.filter(p => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === "All" || p.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  function handleFilterStatus(value: string) {
+    setFilterStatus(value);
+    fetchProjects(undefined, value !== "All" ? STATUS_MAP[value] : undefined);
+  }
+
+  const filtered = projects.filter(p =>
+    p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
+  );
 
   const user = useUserStore(state => state.user)
 
@@ -193,7 +200,7 @@ export default function AdminProjectsView() {
         <div className="flex flex-wrap gap-3 flex-1">
           <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Search projects..."
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-56" />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          <select value={filterStatus} onChange={e => handleFilterStatus(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">
             {["All", "Live", "In Progress", "Archived"].map(s => <option key={s}>{s}</option>)}
           </select>
@@ -267,8 +274,11 @@ export default function AdminProjectsView() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-600">
-          Showing {filtered.length} of {projects.length} projects
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-600">
+            Showing {filtered.length}{pagination ? ` of ${pagination.total_count}` : ""} projects
+          </span>
+          {pagination && <Pagination meta={pagination} onPageChange={(p) => fetchProjects(p, filterStatus !== "All" ? STATUS_MAP[filterStatus] : undefined)} />}
         </div>
       </div>
 

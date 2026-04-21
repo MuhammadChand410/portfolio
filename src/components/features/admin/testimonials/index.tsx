@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import FormField from "@/src/components/shared/FormField";
 import { useTestimonialStore, type Testimonial } from "@/src/store/useTestimonialStore";
 import useTestimonial from "@/src/api/hooks/useTestimonial";
+import { useUserStore } from "@/src/store/useUserStore";
+import { searchTestimonials } from "@/src/api/services/testimonial";
+import Pagination from "@/src/components/shared/Pagination";
 
-type TestimonialForm = Omit<Testimonial, "id">;
+type TestimonialForm = Omit<Testimonial, "id">
 
 const rules = {
-  name:    { required: "Name is required", minLength: { value: 2, message: "At least 2 characters" } },
+  name: { required: "Name is required", minLength: { value: 2, message: "At least 2 characters" } },
   company: { required: "Company is required" },
-  role:    { required: "Role is required" },
-  text:    { required: "Review text is required", minLength: { value: 10, message: "At least 10 characters" }, maxLength: { value: 500, message: "Max 500 characters" } },
-  status:  { required: "Status is required" },
+  role: { required: "Role is required" },
+  text: { required: "Review text is required", minLength: { value: 10, message: "At least 10 characters" }, maxLength: { value: 500, message: "Max 500 characters" } },
+  status: { required: "Status is required" },
 };
 
 function Stars({ count, onChange }: { count: number; onChange?: (n: number) => void }) {
@@ -75,16 +78,43 @@ function TestimonialFormModal({ defaultValues, onSave, onCancel, submitLabel }: 
 }
 
 export default function AdminTestimonialsView() {
-  const { testimonials, loading, search, filterStatus, setSearch, setFilterStatus } = useTestimonialStore();
-  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleToggleStatus } = useTestimonial();
+  const user = useUserStore(state => state.user)
+
+  const { testimonials, loading, search, filterStatus, setSearch, setFilterStatus, setTestimonials, pagination } = useTestimonialStore();
+  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleToggleStatus, fetchTestimonials } = useTestimonial();
   const [modal, setModal] = useState<"add" | "edit" | "view" | "delete" | null>(null);
   const [selected, setSelected] = useState<Testimonial | null>(null);
 
-  const filtered = testimonials.filter(t => {
-    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.company.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === "All" || t.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value.trim()) return;
+    debounceRef.current = setTimeout(async () => {
+      const data = await searchTestimonials(value);
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setTestimonials(raw.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        role: t.role,
+        company: t.company,
+        rating: t.rating,
+        text: t.review_text ?? t.review ?? t.text,
+        status: t.status === "published" ? "Published" : t.status === "hidden" ? "Hidden" : t.status,
+      })));
+    }, 400);
+  }
+
+  function handleFilterStatus(value: string) {
+    setFilterStatus(value);
+    fetchTestimonials(undefined, value !== "All" ? value : undefined);
+  }
+
+  const filtered = testimonials.filter(t =>
+    (t.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (t.company ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
   const openAdd = () => { setSelected(null); setModal("add"); };
   const openEdit = (t: Testimonial) => { setSelected(t); setModal("edit"); };
@@ -118,14 +148,15 @@ export default function AdminTestimonialsView() {
     rating: t?.rating ?? 5, text: t?.text ?? "", status: t?.status ?? "Published",
   });
 
+   
   return (
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 flex-1">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search testimonials..."
+          <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Search testimonials..."
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-56" />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          <select value={filterStatus} onChange={e => handleFilterStatus(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">
             {["All", "Published", "Hidden"].map(s => <option key={s}>{s}</option>)}
           </select>
@@ -176,9 +207,11 @@ export default function AdminTestimonialsView() {
                       <button onClick={() => openEdit(t)} title="Edit" className="p-1.5 text-gray-400 hover:text-violet-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
-                      <button onClick={() => openDelete(t)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                      {user?.role === "super_admin" &&
+                        <button onClick={() => openDelete(t)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -186,8 +219,11 @@ export default function AdminTestimonialsView() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-600">
-          Showing {filtered.length} of {testimonials.length} testimonials
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-600">
+            Showing {filtered.length}{pagination ? ` of ${pagination.total_count}` : ""} testimonials
+          </span>
+          {pagination && <Pagination meta={pagination} onPageChange={(p) => fetchTestimonials(p, filterStatus !== "All" ? filterStatus : undefined)} />}
         </div>
       </div>
 

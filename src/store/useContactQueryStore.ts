@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 import {
   getContactQueries,
   markContactRead,
@@ -18,15 +19,18 @@ export type ContactQuery = {
 };
 
 type ContactQueryStore = {
+ 
   queries: ContactQuery[];
+  pagination: PaginationMeta | null;
   initialLoading: boolean;
   loading: boolean;
   error: string | null;
   search: string;
   filterRead: string;
+  setQueries: (queries: ContactQuery[], pagination?: PaginationMeta) => void;
   setSearch: (v: string) => void;
   setFilterRead: (v: string) => void;
-  fetchQueries: () => Promise<void>;
+  fetchQueries: (page?: number, status?: string) => Promise<void>;
   markRead: (id: number) => Promise<void>;
   markAllRead: () => Promise<void>;
   deleteQuery: (id: number) => Promise<void>;
@@ -34,26 +38,28 @@ type ContactQueryStore = {
 
 export const useContactQueryStore = create<ContactQueryStore>((set, get) => ({
   queries: [],
+  pagination: null,
   initialLoading: true,
   loading: false,
   error: null,
   search: "",
   filterRead: "All",
-
+ setQueries: (queries, pagination) => set({ queries, ...(pagination ? { pagination } : {}) }),
   setSearch: (v) => set({ search: v }),
   setFilterRead: (v) => set({ filterRead: v }),
 
-  fetchQueries: async () => {
+  fetchQueries: async (page, status) => {
     set((s) => s.queries.length === 0 ? { loading: true, initialLoading: true, error: null } : { loading: true, error: null });
     try {
-      const data = await getContactQueries();
+      const data = await getContactQueries(page, status);
       const raw: any[] = Array.isArray(data) ? data : data.results ?? [];
+      const pagination: PaginationMeta | undefined = data.pagination ?? undefined;
       const queries = raw.map((q) => ({
         ...q,
         date: q.created_at,
         status: q.status ?? "unread",
       }));
-      set({ queries, initialLoading: false });
+      set({ queries, initialLoading: false, ...(pagination ? { pagination } : {}) });
     } catch {
       set({ error: "Failed to load queries.", initialLoading: false });
     } finally {

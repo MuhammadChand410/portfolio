@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 const User_Roles: Record<string, string[]> = {
   super_admin: ["/admin/dashboard", "/admin/services", "/admin/projects", "/admin/roles", "/admin/testimonials", "/admin/contact-queries", "/admin/notifications"],
   support_staff: ["/admin/contact-queries", "/admin/notifications"],
-  content_creator: ["/admin/projects", "/admin/testimonials"],
+  content_creator: ["/admin/services", "/admin/projects", "/admin/testimonials", "/admin/notifications"],
 }
 
 export function proxy(request: NextRequest) {

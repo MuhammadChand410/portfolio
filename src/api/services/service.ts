@@ -1,8 +1,10 @@
 import api from "../axiosInstance";
 import { API_ENDPOINTS } from "../endpoints";
 
-export const getServices = async () => {
-  const response = await api.get(API_ENDPOINTS.SERVICES.GET_ALL);
+export const getServices = async (page?: number) => {
+  const response = await api.get(API_ENDPOINTS.SERVICES.GET_ALL, {
+    params: page ? { page } : undefined,
+  });
   return response.data;
 };
 

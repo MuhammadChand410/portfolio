@@ -3,8 +3,18 @@ import { API_ENDPOINTS } from "../endpoints";
 
 
 
-export const getTestimonials = async () => {
-  const response = await api.get(API_ENDPOINTS.TESTIMONIAL.GET_ALL);
+export const getTestimonials = async (page?: number, status?: string) => {
+  const response = await api.get(API_ENDPOINTS.TESTIMONIAL.GET_ALL, {
+    params: {
+      ...(page ? { page } : {}),
+      ...(status ? { status } : {}),
+    },
+  });
+  return response.data;
+};
+
+export const searchTestimonials = async (term: string) => {
+  const response = await api.get(API_ENDPOINTS.TESTIMONIAL.SEARCH(term));
   return response.data;
 };
 

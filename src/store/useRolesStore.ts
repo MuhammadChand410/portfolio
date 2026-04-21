@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
 export type RoleUser = {
   id: number;
@@ -11,11 +12,12 @@ export type RoleUser = {
 
 type RolesStore = {
   users: RoleUser[];
+  pagination: PaginationMeta | null;
   loading: boolean;
   search: string;
   filterRole: string;
   filterStatus: string;
-  setUsers: (u: RoleUser[]) => void;
+  setUsers: (u: RoleUser[], pagination?: PaginationMeta) => void;
   setLoading: (v: boolean) => void;
   setSearch: (v: string) => void;
   setFilterRole: (v: string) => void;
@@ -27,11 +29,12 @@ type RolesStore = {
 
 export const useRolesStore = create<RolesStore>((set) => ({
   users: [],
+  pagination: null,
   loading: false,
   search: "",
   filterRole: "All Roles",
   filterStatus: "All Status",
-  setUsers: (u) => set({ users: u }),
+  setUsers: (u, pagination) => set({ users: u, ...(pagination ? { pagination } : {}) }),
   setLoading: (v) => set({ loading: v }),
   setSearch: (v) => set({ search: v }),
   setFilterRole: (v) => set({ filterRole: v }),

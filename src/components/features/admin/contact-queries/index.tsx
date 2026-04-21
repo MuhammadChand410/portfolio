@@ -1,21 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useContactQueryStore, type ContactQuery as Query } from "@/src/store/useContactQueryStore";
+import { useUserStore } from "@/src/store/useUserStore";
+import { getContactQueries, searchContactQueries } from "@/src/api/services/contact";
+import Pagination from "@/src/components/shared/Pagination";
 
 export default function AdminContactQueriesView() {
-  const { queries, initialLoading, error, search, filterRead, setSearch, setFilterRead, markRead, markAllRead, deleteQuery, fetchQueries } = useContactQueryStore();
+  const user = useUserStore(state => state.user)
+
+  const { queries, initialLoading, error, search, filterRead, setSearch, setFilterRead, markRead, markAllRead, deleteQuery, fetchQueries, setQueries, pagination } = useContactQueryStore();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Query | null>(null);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = value.trim() ? await searchContactQueries(value) : await getContactQueries();
+        const raw = Array.isArray(data) ? data : data.results ?? [];
+        setQueries(raw.map((q: any) => ({
+          ...q,
+          date: q.created_at,
+          status: q.status ?? "unread",
+        })));
+      } catch {}
+    }, 400);
+  }
 
   useEffect(() => { fetchQueries(); }, []);
 
   const selected = selectedId != null ? queries.find((q) => q.id === selectedId) ?? null : null;
 
+  const FILTER_STATUS_MAP: Record<string, string> = { "Read": "read", "Unread": "unread" };
+
+  function handleFilterRead(value: string) {
+    setFilterRead(value);
+    fetchQueries(undefined, value !== "All" ? FILTER_STATUS_MAP[value] : undefined);
+  }
+
   const filtered = queries.filter(q => {
-    const matchSearch = (q.name ?? '').toLowerCase().includes(search.toLowerCase()) || (q.email ?? '').toLowerCase().includes(search.toLowerCase()) || (q.message ?? '').toLowerCase().includes(search.toLowerCase());
     const matchRead = filterRead === "All" || (filterRead === "Unread" && q.status === "unread") || (filterRead === "Read" && q.status === "read");
-    return matchSearch && matchRead;
+    return matchRead;
   });
 
   const unreadCount = queries.filter(q => q.status === "unread").length;
@@ -33,9 +62,9 @@ export default function AdminContactQueriesView() {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 flex-1 items-center">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search queries..."
+          <input value={search} onChange={e => handleSearch (e.target.value)} placeholder="Search queries..."
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-56" />
-          <select value={filterRead} onChange={e => setFilterRead(e.target.value)}
+          <select value={filterRead} onChange={e => handleFilterRead(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">
             {["All", "Unread", "Read"].map(s => <option key={s}>{s}</option>)}
           </select>
@@ -97,9 +126,11 @@ export default function AdminContactQueriesView() {
                       <a href={`mailto:${q.email}`} title="Reply" className="p-1.5 text-gray-400 hover:text-emerald-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
                       </a>
-                      <button onClick={() => setDeleteTarget(q)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                      {user?.role === "super_admin" &&
+                        <button onClick={() => setDeleteTarget(q)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -107,8 +138,11 @@ export default function AdminContactQueriesView() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-600">
-          Showing {filtered.length} of {queries.length} queries · {unreadCount} unread
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-600">
+            Showing {filtered.length}{pagination ? ` of ${pagination.total_count}` : ""} queries · {unreadCount} unread
+          </span>
+          {pagination && <Pagination meta={pagination} onPageChange={(p) => fetchQueries(p, filterRead !== "All" ? FILTER_STATUS_MAP[filterRead] : undefined)} />}
         </div>
       </div>
 
@@ -136,11 +170,15 @@ export default function AdminContactQueriesView() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
                   Reply
                 </a>
-                <button onClick={() => { setDeleteTarget(selected); setSelectedId(null); }}
-                  className="flex items-center justify-center gap-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-900 px-4 py-2.5 rounded-lg text-sm transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Delete
-                </button>
+                {user?.role === "super_admin" &&
+                  <button onClick={() => { setDeleteTarget(selected); setSelectedId(null); }}
+                    className={`flex items-center justify-center gap-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-900 px-4 py-2.5 rounded-lg text-sm transition-colors`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete
+                  </button>
+                }
+
+
                 <button onClick={() => setSelectedId(null)} className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm transition-colors">Close</button>
               </div>
             </div>

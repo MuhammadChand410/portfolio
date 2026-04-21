@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   CONTACT: {
     SEND: '/contact-queries/',
     GET_ALL: '/contact-queries/',
+    SEARCH: (searchTerm: string) => `/contact-queries/?search=${searchTerm}`,
     MARK_READ: (id: number) => `/contact-queries/${id}/mark-read/`,
     MARK_ALLREAD: '/contact-queries/mark-all-read/',
     DELETE: (id: number) => `/contact-queries/${id}/`,
@@ -27,6 +28,7 @@ export const API_ENDPOINTS = {
     CREATE: '/testimonial/',
     UPDATE: (id: number) => `/testimonial/${id}/`,
     DELETE: (id: number) => `/testimonial/${id}/`,
+    SEARCH: (searchTerm: string) => `/testimonial/?search=${searchTerm}`,
   },
   ROLES: {
     GET_ALL: '/auth/users/',
@@ -34,6 +36,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: number) => `/auth/users/${id}/`,
     DELETE: (id: number) => `/auth/users/${id}/`,
     REVOKE: (id: number) => `/auth/users/${id}/revoke/`,
+    SEARCH: (searchTerm: string) => `/auth/users/?search=${searchTerm}`,
   },
   SERVICES: {
     GET_ALL: '/services/',

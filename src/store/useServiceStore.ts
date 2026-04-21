@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
 export type Service = {
   id: number;
@@ -10,10 +11,11 @@ export type Service = {
 };
 
 type ServiceStore = {
-  services: Service[];
   loading: boolean;
   search: string;
-  setServices: (s: Service[]) => void;
+  services: Service[];
+  pagination: PaginationMeta | null;
+  setServices: (s: Service[], pagination?: PaginationMeta) => void;
   setLoading: (v: boolean) => void;
   setSearch: (v: string) => void;
   addService: (s: Service) => void;
@@ -23,9 +25,10 @@ type ServiceStore = {
 
 export const useServiceStore = create<ServiceStore>((set) => ({
   services: [],
+  pagination: null,
   loading: false,
   search: "",
-  setServices: (services) => set({ services }),
+  setServices: (services, pagination) => set({ services, ...(pagination ? { pagination } : {}) }),
   setLoading: (loading) => set({ loading }),
   setSearch: (v) => set({ search: v }),
   addService: (s) => set((state) => ({ services: [s, ...state.services] })),

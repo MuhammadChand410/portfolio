@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useServiceStore, type Service } from "@/src/store/useServiceStore";
 import useService from "@/src/api/hooks/useService";
 import { useUserStore } from "@/src/store/useUserStore";
+import Pagination from "@/src/components/shared/Pagination";
 
 // Must match backend expected values exactly
 const GRADIENTS: { label: string; key: string; from: string; to: string }[] = [
@@ -128,17 +129,25 @@ function ServiceModal({ form, setForm, onSave, onCancel, submitLabel }: {
 }
 
 export default function AdminServicesView() {
-  const { services, loading, search, setSearch } = useServiceStore();
-  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleToggleVisibility } = useService();
+  const { services, loading, search, setSearch , setServices, pagination } = useServiceStore();
+  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleToggleVisibility, fetchServices } = useService();
   const [modal, setModal] = useState<"add" | "edit" | "delete" | null>(null);
   const [selected, setSelected] = useState<Service | null>(null);
   const [form, setForm] = useState<ServiceForm>(empty);
   const user = useUserStore((state) => state.user);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSearch(value: string) {
+    setSearch(value);
+  }
+
   const filtered = services.filter((s) =>
     s.title.toLowerCase().includes(search.toLowerCase()) ||
     s.description.toLowerCase().includes(search.toLowerCase())
   );
+
+  const paginated = filtered;
 
   const openAdd = () => { setForm(empty); setSelected(null); setModal("add"); };
   const openEdit = (s: Service) => { setSelected(s); setForm(toForm(s)); setModal("edit"); };
@@ -171,7 +180,7 @@ export default function AdminServicesView() {
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search services..."
+        <input value={search} onChange={e => handleSearch (e.target.value)} placeholder="Search services..."
           className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-64" />
         <button onClick={openAdd} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -193,10 +202,10 @@ export default function AdminServicesView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr><td colSpan={5} className="text-center py-12 text-gray-400 dark:text-gray-600">No services found</td></tr>
               )}
-              {filtered.map((s) => {
+              {paginated.map((s) => {
                 const g = getGradient(s.color_gradient);
                 return (
                   <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
@@ -211,10 +220,10 @@ export default function AdminServicesView() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {s.features.slice(0, 2).map((f) => (
+                        {(s.features ?? []).slice(0, 2).map((f) => (
                           <span key={f} className="text-xs bg-violet-950/60 text-violet-300 px-2 py-0.5 rounded border border-violet-800/50 truncate max-w-[120px]">{f}</span>
                         ))}
-                        {s.features.length > 2 && <span className="text-xs text-gray-400">+{s.features.length - 2}</span>}
+                        {(s.features ?? []).length > 2 && <span className="text-xs text-gray-400">+{(s.features ?? []).length - 2}</span>}
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -244,8 +253,11 @@ export default function AdminServicesView() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-600">
-          Showing {filtered.length} of {services.length} services
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-600">
+            Showing {services.length}{pagination ? ` of ${pagination.total_count}` : ""} services
+          </span>
+          {pagination && <Pagination meta={pagination} onPageChange={(p) => fetchServices(p)} />}
         </div>
       </div>
 

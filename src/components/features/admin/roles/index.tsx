@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import FormField from "@/src/components/shared/FormField";
 import { useRolesStore, type RoleUser } from "@/src/store/useRolesStore";
 import useRoles from "@/src/api/hooks/useRoles";
+import { searchRoles, getRoles } from "@/src/api/services/roles";
+import Pagination from "@/src/components/shared/Pagination";
 
 const ROLES = [
   { label: "Support Staff", value: "support_staff" },
@@ -64,17 +66,52 @@ function UserFormModal({ defaultValues, onSave, onCancel, submitLabel }: {
 type ModalType = "add" | "edit" | "view" | "delete" | "revoke" | null;
 
 export default function AdminRolesView() {
-  const { users, loading, search, filterRole, filterStatus, setSearch, setFilterRole, setFilterStatus } = useRolesStore();
-  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleRevoke, handleActivate } = useRoles();
+  const { users, loading, search, filterRole, filterStatus, setSearch, setFilterRole, setFilterStatus, setUsers, pagination } = useRolesStore();
+  const { handleAdd, handleUpdate, handleDelete: apiDelete, handleRevoke, handleActivate, fetchRoles } = useRoles();
   const [modal, setModal] = useState<ModalType>(null);
   const [selected, setSelected] = useState<RoleUser | null>(null);
 
-const filtered = users.filter((u) => {
-    const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = filterRole === "All Roles" || u.role === filterRole;
-    const matchStatus = filterStatus === "All Status" || u.status === filterStatus;
-    return matchSearch && matchRole && matchStatus;
-  });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+    function handleSearch(value: string) {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = value.trim() ? await searchRoles(value) : await getRoles(
+          undefined,
+          filterRole !== "All Roles" ? filterRole : undefined,
+          filterStatus !== "All Status" ? STATUS_MAP[filterStatus] : undefined
+        );
+        const raw = Array.isArray(data) ? data : data.results ?? [];
+        setUsers(
+          raw.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            role: r.role,
+            status: (r.status === "active" || r.status === "Active" || r.is_active === true) ? "Active" : "Revoked",
+            added: r.added_at ?? r.created_at ?? r.added ?? "",
+          })),
+          data.pagination ?? undefined
+        );
+      } catch {}
+    }, 400);
+  }
+
+  const STATUS_MAP: Record<string, string> = { "Active": "active", "Revoked": "revoked" };
+
+  function handleFilterRole(value: string) {
+    setFilterRole(value);
+    fetchRoles(undefined, value !== "All Roles" ? value : undefined, filterStatus !== "All Status" ? STATUS_MAP[filterStatus] : undefined);
+  }
+
+  function handleFilterStatus(value: string) {
+    setFilterStatus(value);
+    fetchRoles(undefined, filterRole !== "All Roles" ? filterRole : undefined, value !== "All Status" ? STATUS_MAP[value] : undefined);
+  }
+
+  const filtered = users;
 
   const openAdd = () => { setSelected(null); setModal("add"); };
   const openEdit = (u: RoleUser) => { setSelected(u); setModal("edit"); };
@@ -125,14 +162,14 @@ const filtered = users.filter((u) => {
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 flex-1 items-center">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email..."
+          <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Search by name or email..."
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-64" />
-          <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}
+          <select value={filterRole} onChange={(e) => handleFilterRole(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">
             <option value="All Roles">All Roles</option>
             {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+          <select value={filterStatus} onChange={(e) => handleFilterStatus(e.target.value)}
             className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-violet-500">
             {["All Status", "Active", "Revoked"].map((s) => <option key={s}>{s}</option>)}
           </select>
@@ -212,8 +249,11 @@ const filtered = users.filter((u) => {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-600">
-          Showing {filtered.length} of {users.length} users
+        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-400 dark:text-gray-600">
+            Showing {filtered.length}{pagination ? ` of ${pagination.total_count}` : ""} users
+          </span>
+          {pagination && <Pagination meta={pagination} onPageChange={(p) => fetchRoles(p, filterRole !== "All Roles" ? filterRole : undefined, filterStatus !== "All Status" ? STATUS_MAP[filterStatus] : undefined)} />}
         </div>
       </div>
 

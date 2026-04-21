@@ -10,15 +10,18 @@ export default function usePortfolio() {
     fetchProjects();
   }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (page?: number, status?: string) => {
     setLoading(true);
     try {
-      const data = await getPortfolios();
+      const data = await getPortfolios(undefined, page, status);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setProjects(raw.map((p: any) => ({
-        ...p,
-        tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ? p.tech_stack.split(",").map((t: string) => t.trim()).filter(Boolean) : []),
-      })));
+      setProjects(
+        raw.map((p: any) => ({
+          ...p,
+          tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ? p.tech_stack.split(",").map((t: string) => t.trim()).filter(Boolean) : []),
+        })),
+        data.pagination ?? undefined
+      );
     } catch {
       toast.error("Failed to load projects.");
     } finally {
@@ -62,5 +65,5 @@ export default function usePortfolio() {
     }
   };
 
-  return { handleAdd, handleUpdate, handleDelete };
+  return { handleAdd, handleUpdate, handleDelete, fetchProjects };
 }

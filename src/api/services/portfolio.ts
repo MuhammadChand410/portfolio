@@ -1,9 +1,13 @@
 import api from "../axiosInstance";
 import { API_ENDPOINTS } from "../endpoints";
 
-export const getPortfolios = async (search?: string) => {
+export const getPortfolios = async (search?: string, page?: number, status?: string) => {
   const response = await api.get(API_ENDPOINTS.PORTFOLIO.GET_ALL, {
-    params: search ? { search } : undefined,
+    params: {
+      ...(search ? { search } : {}),
+      ...(page ? { page } : {}),
+      ...(status ? { status } : {}),
+    },
   });
   return response.data;
 };

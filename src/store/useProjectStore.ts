@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
 export type Project = {
   id: number;
@@ -15,10 +16,11 @@ export type Project = {
 
 type ProjectStore = {
   projects: Project[];
+  pagination: PaginationMeta | null;
   loading: boolean;
   search: string;
   filterStatus: string;
-  setProjects: (projects: Project[]) => void;
+  setProjects: (projects: Project[], pagination?: PaginationMeta) => void;
   setLoading: (v: boolean) => void;
   setSearch: (v: string) => void;
   setFilterStatus: (v: string) => void;
@@ -29,10 +31,11 @@ type ProjectStore = {
 
 export const useProjectStore = create<ProjectStore>((set) => ({
   projects: [],
+  pagination: null,
   loading: false,
   search: "",
   filterStatus: "All",
-  setProjects: (projects) => set({ projects }),
+  setProjects: (projects, pagination) => set({ projects, ...(pagination ? { pagination } : {}) }),
   setLoading: (loading) => set({ loading }),
   setSearch: (v) => set({ search: v }),
   setFilterStatus: (v) => set({ filterStatus: v }),

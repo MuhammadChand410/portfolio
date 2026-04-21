@@ -10,20 +10,23 @@ export default function useTestimonial() {
     fetchTestimonials();
   }, []);
 
-  const fetchTestimonials = async () => {
+  const fetchTestimonials = async (page?: number, status?: string) => {
     setLoading(true);
     try {
-      const data = await getTestimonials();
+      const data = await getTestimonials(page, status);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setTestimonials(raw.map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        role: t.role,
-        company: t.company,
-        rating: t.rating,
-        text: t.review_text ?? t.review ?? t.text,
-        status: t.status === "published" ? "Published" : t.status === "hidden" ? "Hidden" : t.status,
-      })));
+      setTestimonials(
+        raw.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          role: t.role,
+          company: t.company,
+          rating: t.rating,
+          text: t.review_text ?? t.review ?? t.text,
+          status: t.status === "published" ? "Published" : t.status === "hidden" ? "Hidden" : t.status,
+        })),
+        data.pagination ?? undefined
+      );
     } catch {
       toast.error("Failed to load testimonials.");
     } finally {
@@ -99,5 +102,5 @@ export default function useTestimonial() {
     }
   };
 
-  return { handleAdd, handleUpdate, handleDelete, handleToggleStatus };
+  return { handleAdd, handleUpdate, handleDelete, handleToggleStatus, fetchTestimonials };
 }

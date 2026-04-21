@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
 export type Testimonial = {
   id: number;
@@ -12,10 +13,11 @@ export type Testimonial = {
 
 type TestimonialStore = {
   testimonials: Testimonial[];
+  pagination: PaginationMeta | null;
   loading: boolean;
   search: string;
   filterStatus: string;
-  setTestimonials: (t: Testimonial[]) => void;
+  setTestimonials: (t: Testimonial[], pagination?: PaginationMeta) => void;
   setLoading: (v: boolean) => void;
   setSearch: (v: string) => void;
   setFilterStatus: (v: string) => void;
@@ -27,10 +29,11 @@ type TestimonialStore = {
 
 export const useTestimonialStore = create<TestimonialStore>((set) => ({
   testimonials: [],
+  pagination: null,
   loading: false,
   search: "",
   filterStatus: "All",
-  setTestimonials: (t) => set({ testimonials: t }),
+  setTestimonials: (t, pagination) => set({ testimonials: t, ...(pagination ? { pagination } : {}) }),
   setLoading: (v) => set({ loading: v }),
   setSearch: (v) => set({ search: v }),
   setFilterStatus: (v) => set({ filterStatus: v }),

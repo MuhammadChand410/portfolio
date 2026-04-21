@@ -1,8 +1,14 @@
 import api from "../axiosInstance";
 import { API_ENDPOINTS } from "../endpoints";
 
-export const getRoles = async () => {
-  const response = await api.get(API_ENDPOINTS.ROLES.GET_ALL);
+export const getRoles = async (page?: number, role?: string, status?: string) => {
+  const response = await api.get(API_ENDPOINTS.ROLES.GET_ALL, {
+    params: {
+      ...(page ? { page } : {}),
+      ...(role ? { role } : {}),
+      ...(status ? { status } : {}),
+    },
+  });
   return response.data;
 };
 
@@ -13,6 +19,14 @@ export const createRole = async (data: Record<string, string>) => {
 
 export const updateRole = async (id: number, data: Record<string, string>) => {
   const response = await api.patch(API_ENDPOINTS.ROLES.UPDATE(id), data);
+  return response.data;
+};
+// export const searchTestimonials = async (term: string) => {
+//   const response = await api.get(API_ENDPOINTS.TESTIMONIAL.SEARCH(term));
+//   return response.data;
+// };
+export const searchRoles = async (term: string) => {
+  const response = await api.get(API_ENDPOINTS.ROLES.SEARCH(term));
   return response.data;
 };
 

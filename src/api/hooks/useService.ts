@@ -21,12 +21,12 @@ export default function useService() {
 
   useEffect(() => { fetchServices(); }, []);
 
-  const fetchServices = async () => {
+  const fetchServices = async (page?: number) => {
     setLoading(true);
     try {
-      const data = await getServices();
+      const data = await getServices(page);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setServices(raw.map(normalize));
+      setServices(raw.map(normalize), data.pagination ?? undefined);
     } catch {
       toast.error("Failed to load services.");
     } finally {
@@ -87,5 +87,5 @@ export default function useService() {
     }
   };
 
-  return { handleAdd, handleUpdate, handleDelete, handleToggleVisibility };
+  return { handleAdd, handleUpdate, handleDelete, handleToggleVisibility, fetchServices };
 }

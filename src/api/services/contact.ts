@@ -6,8 +6,18 @@ export const sendContactMessage = async (name: string, email: string, subject: s
   return response.data;
 };
 
-export const getContactQueries = async () => {
-  const response = await api.get(API_ENDPOINTS.CONTACT.GET_ALL + "?page_size=50");
+export const getContactQueries = async (page?: number, status?: string) => {
+  const response = await api.get(API_ENDPOINTS.CONTACT.GET_ALL, {
+    params: {
+      ...(page ? { page } : {}),
+      ...(status ? { status } : {}),
+    },
+  });
+  return response.data;
+};
+
+export const searchContactQueries = async (term: string) => {
+  const response = await api.get(API_ENDPOINTS.CONTACT.SEARCH(term));
   return response.data;
 };
 

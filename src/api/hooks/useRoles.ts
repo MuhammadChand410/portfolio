@@ -19,12 +19,12 @@ export default function useRoles() {
 
   useEffect(() => { fetchRoles(); }, []);
 
-  const fetchRoles = async () => {
+  const fetchRoles = async (page?: number, role?: string, status?: string) => {
     setLoading(true);
     try {
-      const data = await getRoles();
+      const data = await getRoles(page, role, status);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setUsers(raw.map(normalize));
+      setUsers(raw.map(normalize), data.pagination ?? undefined);
     } catch {
       toast.error("Failed to load roles.");
     } finally {
@@ -91,5 +91,5 @@ export default function useRoles() {
     }
   };
 
-  return { handleAdd, handleUpdate, handleDelete, handleRevoke, handleActivate };
+  return { handleAdd, handleUpdate, handleDelete, handleRevoke, handleActivate, fetchRoles };
 }
