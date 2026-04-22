@@ -1,12 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Reveal from "./Reveal";
-import { projects } from "./_data";
+import { getPortfolios } from "@/src/api/services/portfolio";
 import { GitHubIcon, ExternalLinkIcon, ArrowRightIcon } from "@/src/assets/icons";
 
+type Project = {
+  id: number;
+  title: string;
+  desc: string;
+  tech: string[];
+  github: string;
+  live: string;
+};
+
 export default function ProjectsSection() {
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    getPortfolios().then(data => {
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setProjects(raw.slice(0, 4).map((p: any) => ({
+        id: p.id,
+        title: p.title ?? "",
+        desc: p.description ?? p.desc ?? "",
+        tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
+        github: p.github_url ?? p.github ?? "",
+        live: p.live_url ?? p.live ?? "",
+      })));
+    }).catch(() => {});
+  }, []);
+
   return (
     <section id="projects" className="py-24 bg-gray-100 dark:bg-gray-900">
       <div className="max-w-6xl mx-auto px-6">
@@ -22,7 +47,7 @@ export default function ProjectsSection() {
         </Reveal>
         <div className="grid sm:grid-cols-2 gap-6">
           {projects.map((p, i) => (
-            <Reveal key={p.title} delay={i * 120}>
+            <Reveal key={p.id} delay={i * 120}>
               <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-violet-600 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-violet-900/20 h-full">
                 <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">{p.title}</h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 leading-relaxed">{p.desc}</p>
@@ -32,14 +57,18 @@ export default function ProjectsSection() {
                   ))}
                 </div>
                 <div className="flex gap-4">
-                  <a href={p.github} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-colors">
-                    <GitHubIcon className="w-4 h-4" />
-                    GitHub
-                  </a>
-                  <a href={p.live} className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-colors">
-                    <ExternalLinkIcon className="w-4 h-4" />
-                    Live Demo
-                  </a>
+                  {p.github && (
+                    <a href={p.github} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-colors">
+                      <GitHubIcon className="w-4 h-4" />
+                      GitHub
+                    </a>
+                  )}
+                  {p.live && (
+                    <a href={p.live} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-colors">
+                      <ExternalLinkIcon className="w-4 h-4" />
+                      Live Demo
+                    </a>
+                  )}
                 </div>
               </div>
             </Reveal>

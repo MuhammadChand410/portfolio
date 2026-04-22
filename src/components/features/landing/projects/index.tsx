@@ -3,133 +3,46 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Link from "next/link";
+import { getPortfolios } from "@/src/api/services/portfolio";
+import Pagination from "@/src/components/shared/Pagination";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
-const allProjects = [
-  {
-    title: "E-Commerce Platform",
-    category: "Full-Stack",
-    tech: ["NextJS", "Django", "PostgreSQL", "Stripe"],
-    desc: "Full-stack e-commerce app with cart, payments, admin dashboard, inventory management, and real-time order tracking.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2024",
-    status: "Live",
-  },
-  {
-    title: "Real Estate App",
-    category: "Full-Stack",
-    tech: ["ReactJS", "Laravel", "MySQL", "Google Maps API"],
-    desc: "Property listing platform with advanced search filters, agent profiles, virtual tours, and mortgage calculator.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2024",
-    status: "Live",
-  },
-  {
-    title: "Portfolio CMS",
-    category: "Full-Stack",
-    tech: ["NextJS", "Django REST", "PostgreSQL"],
-    desc: "Dynamic portfolio with a custom CMS for managing projects, blogs, and media. Features rich text editor and SEO tools.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2023",
-    status: "Live",
-  },
-  {
-    title: "Task Management Tool",
-    category: "Frontend",
-    tech: ["ReactJS", "Node.js", "Socket.io", "MongoDB"],
-    desc: "Kanban-style task manager with drag-and-drop, real-time collaboration, notifications, and team workspaces.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2023",
-    status: "Live",
-  },
-  {
-    title: "AI Chat Dashboard",
-    category: "Frontend",
-    tech: ["NextJS", "OpenAI API", "TailwindCSS"],
-    desc: "Conversational AI dashboard with streaming responses, conversation history, and custom prompt templates.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2024",
-    status: "In Progress",
-  },
-  {
-    title: "Restaurant Booking System",
-    category: "Full-Stack",
-    tech: ["ReactJS", "Django", "Celery", "Redis"],
-    desc: "Online reservation system with table management, automated email reminders, and analytics dashboard.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2023",
-    status: "Live",
-  },
-  {
-    title: "Crypto Tracker",
-    category: "Frontend",
-    tech: ["NextJS", "CoinGecko API", "Chart.js"],
-    desc: "Real-time cryptocurrency tracker with interactive charts, portfolio management, and price alerts.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2022",
-    status: "Live",
-  },
-  {
-    title: "Learning Management System",
-    category: "Full-Stack",
-    tech: ["ReactJS", "Laravel", "MySQL", "FFmpeg"],
-    desc: "LMS with video courses, quizzes, progress tracking, certificates, and instructor dashboard.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2023",
-    status: "Live",
-  },
-  {
-    title: "Social Media Analytics",
-    category: "Backend",
-    tech: ["Django", "Celery", "PostgreSQL", "Redis"],
-    desc: "Automated social media analytics tool that aggregates data from multiple platforms and generates reports.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2022",
-    status: "Live",
-  },
-  {
-    title: "Weather App",
-    category: "Frontend",
-    tech: ["ReactJS", "OpenWeather API", "Framer Motion"],
-    desc: "Beautiful weather app with animated backgrounds, 7-day forecast, and location-based detection.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2022",
-    status: "Live",
-  },
-  {
-    title: "Invoice Generator",
-    category: "Full-Stack",
-    tech: ["NextJS", "Django", "WeasyPrint", "PostgreSQL"],
-    desc: "Professional invoice generator with PDF export, client management, payment tracking, and recurring invoices.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2023",
-    status: "Live",
-  },
-  {
-    title: "Blog Platform",
-    category: "Backend",
-    tech: ["Django", "Django REST", "PostgreSQL", "AWS S3"],
-    desc: "Headless blog platform with REST API, markdown support, tagging, full-text search, and media uploads.",
-    github: "https://github.com/",
-    live: "#",
-    year: "2022",
-    status: "Live",
-  },
-];
+type Project = {
+  id: number;
+  title: string;
+  category: string;
+  tech: string[];
+  status: string;
+  year: string;
+  github: string;
+  live: string;
+  desc: string;
+  image?: string;
+};
+
+const STATUS_REVERSE: Record<string, string> = {
+  live: "Live",
+  in_progress: "In Progress",
+  archived: "Archived",
+};
 
 const categories = ["All", "Full-Stack", "Frontend", "Backend"];
 
-// ── Three.js floating grid background ────────────────────────────────────────
+function normalize(p: any): Project {
+  return {
+    id: p.id,
+    title: p.title ?? "",
+    category: p.category ?? "",
+    tech: Array.isArray(p.tech) ? p.tech : (p.tech_stack ?? "").split(",").map((t: string) => t.trim()).filter(Boolean),
+    status: p.status ?? "",
+    year: p.year ?? "",
+    github: p.github_url ?? p.github ?? "",
+    live: p.live_url ?? p.live ?? "",
+    desc: p.description ?? p.desc ?? "",
+    image: p.image,
+  };
+}
+
 function GridBackground() {
   const mountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -143,7 +56,6 @@ function GridBackground() {
     renderer.setPixelRatio(1);
     mount.appendChild(renderer.domElement);
 
-    // Floating grid dots
     const count = 180;
     const pos = new Float32Array(count * 3);
     const speeds = new Float32Array(count);
@@ -157,10 +69,8 @@ function GridBackground() {
     const posAttr = new THREE.BufferAttribute(pos, 3);
     posAttr.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute("position", posAttr);
-    const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x7c3aed, size: 0.04, transparent: true, opacity: 0.5 }));
-    scene.add(points);
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x7c3aed, size: 0.04, transparent: true, opacity: 0.5 })));
 
-    // Horizontal grid lines
     for (let i = -6; i <= 6; i++) {
       const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-12, i * 1.1, -2), new THREE.Vector3(12, i * 1.1, -2)]);
       scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.04 })));
@@ -193,7 +103,6 @@ function GridBackground() {
   return <div ref={mountRef} className="absolute inset-0 pointer-events-none" />;
 }
 
-// ── 3D tilt card ─────────────────────────────────────────────────────────────
 function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -213,7 +122,6 @@ function TiltCard({ children, className = "" }: { children: React.ReactNode; cla
   );
 }
 
-// ── Scroll reveal ─────────────────────────────────────────────────────────────
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -226,8 +134,32 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 }
 
 export default function ProjectsView() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [loading, setLoading] = useState(true);
   const [active, setActive] = useState("All");
-  const filtered = active === "All" ? allProjects : allProjects.filter(p => p.category === active);
+
+  async function load(page?: number) {
+    setLoading(true);
+    try {
+      const data = await getPortfolios(undefined, page);
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setProjects(raw.map(normalize));
+      setPagination(data.pagination ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function handleCategory(cat: string) {
+    setActive(cat);
+  }
+
+  const displayed = active === "All" ? projects : projects.filter(p => p.category === active);
+
+  const displayStatus = (status: string) => STATUS_REVERSE[status] ?? status;
 
   return (
     <>
@@ -256,7 +188,6 @@ export default function ProjectsView() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-6">
 
-          {/* Header */}
           <Reveal>
             <div className="text-center mb-4">
               <Link href="/" className="inline-flex items-center gap-2 text-violet-500 dark:text-violet-400 hover:text-violet-600 dark:hover:text-violet-300 text-sm mb-8 transition-colors">
@@ -264,14 +195,20 @@ export default function ProjectsView() {
                 Back to Home
               </Link>
               <h1 className="text-5xl md:text-7xl font-black mb-4 shimmer-text">All Projects</h1>
-              <p className="text-gray-500 dark:text-gray-400 text-lg">A complete collection of {allProjects.length}+ projects I've built</p>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">
+                A complete collection of {pagination?.total_count ?? projects.length}+ projects I've built
+              </p>
             </div>
           </Reveal>
 
-          {/* Stats */}
           <Reveal delay={100}>
             <div className="flex flex-wrap justify-center gap-8 my-12">
-              {[["12+", "Projects"], ["4", "Categories"], ["20+", "Technologies"], ["3+", "Years"]].map(([num, label], i) => (
+              {[
+                [String(pagination?.total_count ?? projects.length) + "+", "Projects"],
+                [String(categories.length - 1), "Categories"],
+                ["20+", "Technologies"],
+                ["3+", "Years"],
+              ].map(([num, label], i) => (
                 <div key={label} className="text-center count-anim" style={{ animationDelay: `${i * 100}ms` }}>
                   <p className="text-4xl font-black text-violet-500 dark:text-violet-400">{num}</p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{label}</p>
@@ -280,70 +217,77 @@ export default function ProjectsView() {
             </div>
           </Reveal>
 
-          {/* Filter tabs */}
           <Reveal delay={150}>
             <div className="flex flex-wrap justify-center gap-3 mb-14">
               {categories.map((cat) => (
-                <button key={cat} onClick={() => setActive(cat)}
+                <button key={cat} onClick={() => handleCategory(cat)}
                   className={`filter-btn px-6 py-2.5 rounded-full text-sm font-semibold border transition-all z-10 ${active === cat ? "active border-transparent text-white" : "border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-white"}`}>
                   {cat}
-                  <span className="ml-2 text-xs opacity-70">
-                    {cat === "All" ? allProjects.length : allProjects.filter(p => p.category === cat).length}
-                  </span>
                 </button>
               ))}
             </div>
           </Reveal>
 
-          {/* Projects grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p, i) => (
-              <Reveal key={p.title} delay={i * 60}>
-                <TiltCard className="neon-border h-full">
-                  <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur border border-gray-200 dark:border-gray-800 rounded-2xl p-6 h-full flex flex-col group">
+          {loading && <div className="flex justify-center py-24 text-gray-400">Loading projects...</div>}
 
-                    {/* Top row */}
-                    <div className="flex items-start justify-between mb-4">
-                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${p.status === "Live" ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800" : "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800"}`}>
-                        {p.status === "Live" ? "● Live" : "◐ In Progress"}
-                      </span>
-                      <span className="text-xs text-gray-400 dark:text-gray-600">{p.year}</span>
-                    </div>
+          {!loading && (
+            <>
+              {displayed.length === 0 && <div className="text-center py-24 text-gray-400">No projects found.</div>}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayed.map((p, i) => {
+                  const status = displayStatus(p.status);
+                  const isLive = status === "Live";
+                  return (
+                    <Reveal key={p.id} delay={i * 60}>
+                      <TiltCard className="neon-border h-full">
+                        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur border border-gray-200 dark:border-gray-800 rounded-2xl p-6 h-full flex flex-col group">
+                          <div className="flex items-start justify-between mb-4">
+                            <span className={`text-xs px-3 py-1 rounded-full font-medium ${isLive ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800" : "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800"}`}>
+                              {isLive ? "● Live" : "◐ In Progress"}
+                            </span>
+                            <span className="text-xs text-gray-400 dark:text-gray-600">{p.year}</span>
+                          </div>
+                          <span className="text-xs text-violet-500 dark:text-violet-400 font-medium mb-2 uppercase tracking-widest">{p.category}</span>
+                          <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-violet-500 dark:group-hover:text-violet-300 transition-colors">{p.title}</h3>
+                          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-5 flex-1">{p.desc}</p>
+                          <div className="flex flex-wrap gap-2 mb-5">
+                            {(p.tech ?? []).map((t, ti) => (
+                              <span key={t} className="badge-anim text-xs bg-violet-100 dark:bg-violet-950/60 text-violet-600 dark:text-violet-300 px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-800/50"
+                                style={{ animationDelay: `${ti * 60}ms` }}>
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                            {p.github && (
+                              <a href={p.github} target="_blank" rel="noreferrer"
+                                className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" /></svg>
+                                Code
+                              </a>
+                            )}
+                            {p.live && (
+                              <a href={p.live} target="_blank" rel="noreferrer"
+                                className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                Live Demo
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </TiltCard>
+                    </Reveal>
+                  );
+                })}
+              </div>
 
-                    {/* Category tag */}
-                    <span className="text-xs text-violet-500 dark:text-violet-400 font-medium mb-2 uppercase tracking-widest">{p.category}</span>
-
-                    <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white group-hover:text-violet-500 dark:group-hover:text-violet-300 transition-colors">{p.title}</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-5 flex-1">{p.desc}</p>
-
-                    {/* Tech badges */}
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {p.tech.map((t, ti) => (
-                        <span key={t} className="badge-anim text-xs bg-violet-100 dark:bg-violet-950/60 text-violet-600 dark:text-violet-300 px-2.5 py-1 rounded-full border border-violet-300 dark:border-violet-800/50"
-                          style={{ animationDelay: `${ti * 60}ms` }}>
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Links */}
-                    <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <a href={p.github} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" /></svg>
-                        Code
-                      </a>
-                      <a href={p.live}
-                        className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        Live Demo
-                      </a>
-                    </div>
-                  </div>
-                </TiltCard>
-              </Reveal>
-            ))}
-          </div>
+              {pagination && (
+                <div className="flex justify-center mt-12">
+                  <Pagination meta={pagination} onPageChange={(page) => load(page)} />
+                </div>
+              )}
+            </>
+          )}
 
         </div>
       </div>

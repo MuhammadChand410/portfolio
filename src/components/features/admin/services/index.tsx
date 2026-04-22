@@ -5,6 +5,7 @@ import { useServiceStore, type Service } from "@/src/store/useServiceStore";
 import useService from "@/src/api/hooks/useService";
 import { useUserStore } from "@/src/store/useUserStore";
 import Pagination from "@/src/components/shared/Pagination";
+import { getServices, searchServices } from "@/src/api/services/service";
 
 // Must match backend expected values exactly
 const GRADIENTS: { label: string; key: string; from: string; to: string }[] = [
@@ -140,14 +141,29 @@ export default function AdminServicesView() {
 
   function handleSearch(value: string) {
     setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = value.trim() ? await searchServices(value) : await getServices();
+        const raw = Array.isArray(data) ? data : data.results ?? [];
+        setServices(
+          raw.map((s: any) => ({
+            id: s.id,
+            title: s.title ?? "",
+            description: s.description ?? "",
+            features: Array.isArray(s.features)
+              ? s.features
+              : String(s.features ?? "").split(",").map((f: string) => f.trim()).filter(Boolean),
+            color_gradient: s.color_gradient ?? "violet_purple",
+            visible: s.visible ?? true,
+          })),
+          data.pagination ?? undefined
+        );
+      } catch {}
+    }, 400);
   }
 
-  const filtered = services.filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase()) ||
-    s.description.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const paginated = filtered;
+  const filtered = services;
 
   const openAdd = () => { setForm(empty); setSelected(null); setModal("add"); };
   const openEdit = (s: Service) => { setSelected(s); setForm(toForm(s)); setModal("edit"); };
@@ -180,7 +196,7 @@ export default function AdminServicesView() {
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
-        <input value={search} onChange={e => handleSearch (e.target.value)} placeholder="Search services..."
+        <input value={search} onChange={e => handleSearch(e.target.value)} placeholder="Search services..."
           className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-violet-500 w-64" />
         <button onClick={openAdd} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -202,10 +218,10 @@ export default function AdminServicesView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
-              {paginated.length === 0 && (
+              {filtered.length === 0 && (
                 <tr><td colSpan={5} className="text-center py-12 text-gray-400 dark:text-gray-600">No services found</td></tr>
               )}
-              {paginated.map((s) => {
+              {filtered.map((s) => {
                 const g = getGradient(s.color_gradient);
                 return (
                   <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">

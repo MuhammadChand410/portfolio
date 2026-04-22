@@ -18,6 +18,11 @@ export const updateService = async (id: number, data: Record<string, any>) => {
   return response.data;
 };
 
+export const searchServices = async (searchTerm: string) => {
+  const response = await api.get(API_ENDPOINTS.SERVICES.SEARCH(searchTerm));
+  return response.data;
+};
+
 export const deleteService = async (id: number) => {
   await api.delete(API_ENDPOINTS.SERVICES.DELETE(id));
 };

@@ -3,22 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Link from "next/link";
+import { getTestimonials } from "@/src/api/services/testimonial";
+import Pagination from "@/src/components/shared/Pagination";
+import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
-const allTestimonials = [
-  { name: "Sarah Johnson", role: "CEO", company: "TechStart", rating: 5, text: "Muhammad delivered an outstanding website that exceeded our expectations. His attention to detail and communication were top-notch. The project was delivered ahead of schedule.", avatar: "SJ" },
-  { name: "Ali Hassan", role: "Product Manager", company: "DevCo", rating: 5, text: "Incredibly talented developer. He built our entire platform from scratch and delivered on time. The code quality was exceptional and well-documented. Highly recommended!", avatar: "AH" },
-  { name: "Emily Clarke", role: "Founder", company: "DesignHub", rating: 5, text: "Working with Ahmad was a pleasure. Clean code, great design sense, and always responsive to feedback. He transformed our vision into a beautiful, functional product.", avatar: "EC" },
-  { name: "James Wilson", role: "CTO", company: "StartupXYZ", rating: 5, text: "Ahmad's technical skills are impressive. He tackled complex backend challenges with ease and delivered a scalable solution. Our platform handles 10x more traffic now.", avatar: "JW" },
-  { name: "Fatima Malik", role: "Marketing Director", company: "BrandCo", rating: 5, text: "The landing page Ahmad built for us increased our conversion rate by 40%. His understanding of UX and performance optimization is outstanding.", avatar: "FM" },
-  { name: "David Chen", role: "Engineering Lead", company: "FinTech Inc", rating: 5, text: "Exceptional full-stack developer. Ahmad integrated our payment system flawlessly and the admin dashboard he built saves our team hours every week.", avatar: "DC" },
-  { name: "Aisha Raza", role: "CEO", company: "EduPlatform", rating: 5, text: "Our LMS was built by Ahmad and it's been running flawlessly for over a year. Students love the interface and the backend is rock solid. Couldn't be happier.", avatar: "AR" },
-  { name: "Michael Torres", role: "Freelance Designer", company: "Self-employed", rating: 5, text: "I've collaborated with Ahmad on multiple client projects. He's my go-to developer — reliable, fast, and produces beautiful code. A true professional.", avatar: "MT" },
-  { name: "Zara Ahmed", role: "Product Owner", company: "RetailTech", rating: 5, text: "Ahmad rebuilt our entire e-commerce platform in record time. The new site is faster, more beautiful, and our sales have increased by 60% since launch.", avatar: "ZA" },
-];
+type Testimonial = {
+  id: number;
+  name: string;
+  role: string;
+  company: string;
+  rating: number;
+  text: string;
+  status: string;
+};
 
 const avatarColors = ["from-violet-600 to-purple-800", "from-cyan-600 to-blue-800", "from-pink-600 to-rose-800", "from-emerald-600 to-teal-800", "from-amber-600 to-orange-800"];
 
-// ── Three.js floating orbs background ────────────────────────────────────────
 function OrbBackground() {
   const mountRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -31,7 +31,6 @@ function OrbBackground() {
     renderer.setSize(W, H); renderer.setPixelRatio(1);
     mount.appendChild(renderer.domElement);
 
-    // Floating orbs
     const orbData: { mesh: THREE.Mesh; speed: number; offset: number }[] = [];
     const orbColors = [0x7c3aed, 0x06b6d4, 0xa78bfa, 0x4c1d95, 0x0e7490];
     for (let i = 0; i < 12; i++) {
@@ -45,7 +44,6 @@ function OrbBackground() {
       orbData.push({ mesh, speed: 0.003 + Math.random() * 0.005, offset: Math.random() * Math.PI * 2 });
     }
 
-    // Scattered stars
     const starCount = 300;
     const starPos = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i++) starPos[i] = (Math.random() - 0.5) * 30;
@@ -53,17 +51,11 @@ function OrbBackground() {
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
     scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.025, transparent: true, opacity: 0.3 })));
 
-    // Connecting arcs between orbs
     orbData.forEach((a, i) => {
       if (i % 3 !== 0) return;
       const b = orbData[(i + 3) % orbData.length];
-      const curve = new THREE.QuadraticBezierCurve3(
-        a.mesh.position.clone(),
-        new THREE.Vector3(0, 0, 0),
-        b.mesh.position.clone()
-      );
-      const pts = curve.getPoints(30);
-      const g = new THREE.BufferGeometry().setFromPoints(pts);
+      const curve = new THREE.QuadraticBezierCurve3(a.mesh.position.clone(), new THREE.Vector3(0, 0, 0), b.mesh.position.clone());
+      const g = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
       scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.05 })));
     });
 
@@ -89,7 +81,6 @@ function OrbBackground() {
   return <div ref={mountRef} className="absolute inset-0 pointer-events-none" />;
 }
 
-// ── Scroll reveal ─────────────────────────────────────────────────────────────
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -101,7 +92,6 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   return <div ref={ref} className="reveal-item" style={{ transitionDelay: `${delay}ms` }}>{children}</div>;
 }
 
-// ── Star rating ───────────────────────────────────────────────────────────────
 function Stars({ count }: { count: number }) {
   return (
     <div className="flex gap-0.5">
@@ -114,8 +104,37 @@ function Stars({ count }: { count: number }) {
   );
 }
 
+function normalize(t: any): Testimonial {
+  return {
+    id: t.id,
+    name: t.name ?? "",
+    role: t.role ?? "",
+    company: t.company ?? "",
+    rating: t.rating ?? 5,
+    text: t.review_text ?? t.review ?? t.text ?? "",
+    status: t.status ?? "",
+  };
+}
+
 export default function TestimonialsView() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [loading, setLoading] = useState(true);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  async function load(page?: number) {
+    setLoading(true);
+    try {
+      const data = await getTestimonials(page);
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setTestimonials(raw.map(normalize));
+      setPagination(data.pagination ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
 
   return (
     <>
@@ -139,7 +158,6 @@ export default function TestimonialsView() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-6">
 
-          {/* Header */}
           <Reveal>
             <div className="text-center mb-16">
               <Link href="/" className="inline-flex items-center gap-2 text-violet-500 dark:text-violet-400 hover:text-violet-600 dark:hover:text-violet-300 text-sm mb-8 transition-colors">
@@ -152,10 +170,14 @@ export default function TestimonialsView() {
             </div>
           </Reveal>
 
-          {/* Stats bar */}
           <Reveal delay={100}>
             <div className="flex flex-wrap justify-center gap-12 mb-16">
-              {[["9+", "Happy Clients"], ["100%", "Satisfaction Rate"], ["5★", "Average Rating"], ["30+", "Projects Delivered"]].map(([val, label]) => (
+              {[
+                [`${pagination?.total_count ?? testimonials.length}+`, "Happy Clients"],
+                ["100%", "Satisfaction Rate"],
+                ["5★", "Average Rating"],
+                ["30+", "Projects Delivered"],
+              ].map(([val, label]) => (
                 <div key={label} className="text-center">
                   <p className="text-4xl font-black text-violet-500 dark:text-violet-400">{val}</p>
                   <p className="text-gray-500 text-sm mt-1">{label}</p>
@@ -164,46 +186,55 @@ export default function TestimonialsView() {
             </div>
           </Reveal>
 
-          {/* Testimonials grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allTestimonials.map((t, i) => (
-              <Reveal key={t.name} delay={i * 70}>
-                <div
-                  className="t-card bg-gray-50 dark:bg-gray-900/70 backdrop-blur border border-gray-200 dark:border-gray-800 rounded-2xl p-7 flex flex-col h-full cursor-default"
-                  onMouseEnter={() => setHovered(i)}
-                  onMouseLeave={() => setHovered(null)}
-                >
-                  {/* Quote mark */}
-                  <div className={`text-6xl font-black leading-none mb-4 quote-anim ${hovered === i ? "text-violet-500 dark:text-violet-400" : "text-violet-200 dark:text-violet-800"} transition-colors duration-300`}
-                    style={{ animationDelay: `${i * 60}ms` }}>
-                    "
-                  </div>
+          {loading && (
+            <div className="flex justify-center py-24 text-gray-400">Loading testimonials...</div>
+          )}
 
-                  {/* Stars */}
-                  <div className="mb-4"><Stars count={t.rating} /></div>
+          {!loading && (
+            <>
+              {testimonials.length === 0 && (
+                <div className="text-center py-24 text-gray-400">No testimonials found.</div>
+              )}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {testimonials.map((t, i) => {
+                  const initials = t.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+                  return (
+                    <Reveal key={t.id} delay={i * 70}>
+                      <div
+                        className="t-card bg-gray-50 dark:bg-gray-900/70 backdrop-blur border border-gray-200 dark:border-gray-800 rounded-2xl p-7 flex flex-col h-full cursor-default"
+                        onMouseEnter={() => setHovered(i)}
+                        onMouseLeave={() => setHovered(null)}
+                      >
+                        <div className={`text-6xl font-black leading-none mb-4 quote-anim ${hovered === i ? "text-violet-500 dark:text-violet-400" : "text-violet-200 dark:text-violet-800"} transition-colors duration-300`}
+                          style={{ animationDelay: `${i * 60}ms` }}>
+                          "
+                        </div>
+                        <div className="mb-4"><Stars count={t.rating} /></div>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed flex-1 mb-6">{t.text}</p>
+                        <div className={`neon-line mb-5 transition-opacity duration-300 ${hovered === i ? "opacity-100" : "opacity-30"}`} />
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 avatar-ring ${hovered === i ? "avatar-ring-active" : ""}`}>
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{t.name}</p>
+                            <p className="text-violet-500 dark:text-violet-400 text-xs">{t.role} @ {t.company}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
+                  );
+                })}
+              </div>
 
-                  {/* Text */}
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed flex-1 mb-6">{t.text}</p>
-
-                  {/* Divider */}
-                  <div className={`neon-line mb-5 transition-opacity duration-300 ${hovered === i ? "opacity-100" : "opacity-30"}`} />
-
-                  {/* Author */}
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0 avatar-ring ${hovered === i ? "avatar-ring-active" : ""}`}>
-                      {t.avatar}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">{t.name}</p>
-                      <p className="text-violet-500 dark:text-violet-400 text-xs">{t.role} @ {t.company}</p>
-                    </div>
-                  </div>
+              {pagination && (
+                <div className="flex justify-center mt-12">
+                  <Pagination meta={pagination} onPageChange={(page) => load(page)} />
                 </div>
-              </Reveal>
-            ))}
-          </div>
+              )}
+            </>
+          )}
 
-          {/* CTA */}
           <Reveal delay={200}>
             <div className="text-center mt-20">
               <p className="text-gray-500 dark:text-gray-400 mb-6">Want to work together?</p>

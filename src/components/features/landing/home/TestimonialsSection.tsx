@@ -3,16 +3,40 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Reveal from "./Reveal";
-import { testimonials } from "./_data";
+import { getTestimonials } from "@/src/api/services/testimonial";
+
+const avatarColors = [
+  "from-violet-600 to-purple-700",
+  "from-blue-600 to-indigo-700",
+  "from-pink-600 to-rose-700",
+  "from-emerald-600 to-teal-700",
+  "from-amber-600 to-orange-700",
+];
 
 function TestimonialsSlider() {
+  const [list, setList] = useState<any[]>([]);
+  const total = list.length;
+
+  useEffect(() => {
+    getTestimonials().then(data => {
+      const raw = Array.isArray(data) ? data : data.results ?? [];
+      setList(raw.map((t: any) => ({
+        id: t.id,
+        name: t.name ?? "",
+        role: t.role ?? "",
+        company: t.company ?? "",
+        rating: t.rating ?? 5,
+        text: t.review_text ?? t.review ?? t.text ?? "",
+      })));
+    }).catch(() => {});
+  }, []);
+
   const [active, setActive] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
-  const total = testimonials.length;
 
   function go(next: number, dir: "left" | "right") {
-    if (animating) return;
+    if (animating || total === 0) return;
     setDirection(dir);
     setAnimating(true);
     setTimeout(() => {
@@ -22,11 +46,16 @@ function TestimonialsSlider() {
   }
 
   useEffect(() => {
+    if (total === 0) return;
     const id = setInterval(() => go((active + 1) % total, "right"), 4500);
     return () => clearInterval(id);
-  }, [active, animating]);
+  }, [active, animating, total]);
 
-  const t = testimonials[active];
+  if (total === 0) return null;
+
+  const t = list[active];
+  const initials = t.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+  const color = avatarColors[active % avatarColors.length];
 
   return (
     <div className="relative">
@@ -39,7 +68,7 @@ function TestimonialsSlider() {
           transition: "opacity 0.35s ease, transform 0.35s ease",
         }}
       >
-        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${t.color} rounded-t-3xl`} />
+        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color} rounded-t-3xl`} />
         <div className="flex gap-1 mb-6 justify-center">
           {Array.from({ length: t.rating }).map((_, i) => (
             <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -49,12 +78,12 @@ function TestimonialsSlider() {
         </div>
         <p className="text-gray-700 dark:text-gray-200 text-lg md:text-xl leading-relaxed text-center mb-10 italic">&ldquo;{t.text}&rdquo;</p>
         <div className="flex flex-col items-center gap-3">
-          <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
-            {t.avatar}
+          <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
+            {initials}
           </div>
           <div className="text-center">
             <p className="font-semibold text-gray-900 dark:text-white">{t.name}</p>
-            <p className="text-violet-400 text-sm">{t.role}</p>
+            <p className="text-violet-400 text-sm">{t.role} @ {t.company}</p>
           </div>
         </div>
       </div>
@@ -67,7 +96,7 @@ function TestimonialsSlider() {
       </button>
 
       <div className="flex justify-center gap-2 mt-8">
-        {testimonials.map((_, i) => (
+        {list.map((_, i) => (
           <button key={i} onClick={() => go(i, i > active ? "right" : "left")}
             className={`transition-all duration-300 rounded-full ${i === active ? "w-8 h-2.5 bg-violet-500" : "w-2.5 h-2.5 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-500"}`} />
         ))}

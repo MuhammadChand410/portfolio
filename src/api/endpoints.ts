@@ -43,5 +43,6 @@ export const API_ENDPOINTS = {
     CREATE: '/services/',
     UPDATE: (id: number) => `/services/${id}/`,
     DELETE: (id: number) => `/services/${id}/`,
+    SEARCH: (searchTerm: string) => `/services/?search=${searchTerm}`,
   },
 }

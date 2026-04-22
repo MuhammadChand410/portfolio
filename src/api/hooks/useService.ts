@@ -4,13 +4,16 @@ import { useServiceStore } from "@/src/store/useServiceStore";
 import { getServices, createService, updateService, deleteService } from "../services/service";
 
 function normalize(s: any) {
+  const featuresRaw = s.features ?? "";
+  const featuresArray = Array.isArray(featuresRaw)
+    ? featuresRaw
+    : String(featuresRaw).split(",").map((f: string) => f.trim()).filter(Boolean);
+  
   return {
     id: s.id,
     title: s.title ?? "",
     description: s.description ?? "",
-    features: Array.isArray(s.features)
-      ? s.features
-      : (s.features ? String(s.features).split(",").map((f: string) => f.trim()).filter(Boolean) : []),
+    features: featuresArray,
     color_gradient: s.color_gradient ?? "violet_purple",
     visible: s.visible ?? true,
   };
