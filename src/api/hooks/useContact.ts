@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { sendContactMessage } from "../services/contact";
-import { toast } from "react-toastify";
 
 export default function useContact() {
   const [loading, setLoading] = useState(false);
@@ -9,10 +8,8 @@ export default function useContact() {
     try {
       setLoading(true);
       await sendContactMessage(name, email, subject, message);
-      toast.success("Message sent! I'll get back to you within 24 hours.");
       return true;
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to send message. Please try again.");
+    } catch {
       return false;
     } finally {
       setLoading(false);
