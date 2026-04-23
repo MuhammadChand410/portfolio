@@ -1,23 +1,19 @@
 "use client";
 
-export default function GridBackground() {
-  const dots = Array.from({ length: 60 }, (_, i) => ({
-    id: i,
-    left: `${(i % 10) * 10 + Math.random() * 5}%`,
-    top: `${Math.floor(i / 10) * 16 + Math.random() * 8}%`,
-    duration: `${8 + Math.random() * 8}s`,
-    delay: `${Math.random() * 6}s`,
-  }));
+const DOTS = Array.from({ length: 40 }, (_, i) => ({
+  id: i,
+  left: `${(i * 7 + 3) % 100}%`,
+  top: `${(i * 11 + 5) % 100}%`,
+  dur: `${8 + (i % 5) * 2}s`,
+  delay: `${(i % 6) * 1.1}s`,
+}));
 
+export default function GridBackground() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <style>{`
-        @keyframes dot-drift {
-          0%, 100% { transform: translateY(0); opacity: 0.3; }
-          50% { transform: translateY(-12px); opacity: 0.6; }
-        }
+        @keyframes dd { 0%,100% { transform:translateY(0); opacity:.3; } 50% { transform:translateY(-10px); opacity:.55; } }
       `}</style>
-      {/* Grid lines */}
       <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -26,12 +22,12 @@ export default function GridBackground() {
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
       </svg>
-      {/* Floating dots */}
-      {dots.map((d) => (
+      {DOTS.map((d) => (
         <div key={d.id} className="absolute w-1 h-1 rounded-full bg-violet-500"
           style={{
             left: d.left, top: d.top, opacity: 0.3,
-            animation: `dot-drift ${d.duration} ${d.delay} ease-in-out infinite`,
+            willChange: "transform",
+            animation: `dd ${d.dur} ${d.delay} ease-in-out infinite`,
           }} />
       ))}
     </div>

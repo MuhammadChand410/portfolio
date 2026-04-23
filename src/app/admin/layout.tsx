@@ -3,12 +3,13 @@
 import { usePathname } from "next/navigation";
 import DashboardHeader from "@/src/components/shared/dashboard-header";
 import Sidebar from "@/src/components/shared/sidebar";
+import { ToastContainer } from "react-toastify";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   if (pathname === "/admin/login") {
-    return <>{children}</>;
+    return <>{children}<ToastContainer /></>;
   }
 
   return (
@@ -18,6 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <DashboardHeader />
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>
+      <ToastContainer />
     </div>
   );
 }
