@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getPortfolios } from "@/src/api/services/portfolio";
 import Pagination from "@/src/components/shared/Pagination";
 import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
-const GridBackground = dynamic(() => import("./GridBackground"), { ssr: false });
+import GridBackground from "./GridBackground";
 
 type Project = {
   id: number;

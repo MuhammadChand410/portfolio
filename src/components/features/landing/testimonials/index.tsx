@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getTestimonials } from "@/src/api/services/testimonial";
 import Pagination from "@/src/components/shared/Pagination";
 import type { PaginationMeta } from "@/src/components/shared/Pagination";
 
-const OrbBackground = dynamic(() => import("./OrbBackground"), { ssr: false });
+import OrbBackground from "./OrbBackground";
 
 type Testimonial = {
   id: number;
