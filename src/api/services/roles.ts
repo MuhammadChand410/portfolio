@@ -21,10 +21,7 @@ export const updateRole = async (id: number, data: Record<string, string>) => {
   const response = await api.patch(API_ENDPOINTS.ROLES.UPDATE(id), data);
   return response.data;
 };
-// export const searchTestimonials = async (term: string) => {
-//   const response = await api.get(API_ENDPOINTS.TESTIMONIAL.SEARCH(term));
-//   return response.data;
-// };
+
 export const searchRoles = async (term: string) => {
   const response = await api.get(API_ENDPOINTS.ROLES.SEARCH(term));
   return response.data;

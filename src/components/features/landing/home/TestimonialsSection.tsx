@@ -88,17 +88,17 @@ function TestimonialsSlider() {
         </div>
       </div>
 
-      <button onClick={() => go(active - 1, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-violet-500 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-all">
+      <button aria-label="Previous testimonial" onClick={() => go(active - 1, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-violet-500 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-all">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
       </button>
-      <button onClick={() => go(active + 1, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-violet-500 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-all">
+      <button aria-label="Next testimonial" onClick={() => go(active + 1, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-violet-500 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-violet-400 transition-all">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
 
       <div className="flex justify-center gap-2 mt-8">
         {list.map((_, i) => (
-          <button key={i} onClick={() => go(i, i > active ? "right" : "left")}
-            className={`transition-all duration-300 rounded-full ${i === active ? "w-8 h-2.5 bg-violet-500" : "w-2.5 h-2.5 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-500"}`} />
+          <button key={i} aria-label={`Go to testimonial ${i + 1}`} onClick={() => go(i, i > active ? "right" : "left")}
+            className={`transition-all duration-300 rounded-full min-w-[24px] min-h-[24px] flex items-center justify-center ${i === active ? "w-8 h-2.5 bg-violet-500" : "w-2.5 h-2.5 bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-500"}`} />
         ))}
       </div>
     </div>
