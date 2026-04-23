@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getTestimonials } from "@/src/api/services/testimonial";
 import Pagination from "@/src/components/shared/Pagination";
 import type { PaginationMeta } from "@/src/components/shared/Pagination";
+
+const OrbBackground = dynamic(() => import("./OrbBackground"), { ssr: false });
 
 type Testimonial = {
   id: number;
@@ -14,72 +16,9 @@ type Testimonial = {
   company: string;
   rating: number;
   text: string;
-  status: string;
 };
 
 const avatarColors = ["from-violet-600 to-purple-800", "from-cyan-600 to-blue-800", "from-pink-600 to-rose-800", "from-emerald-600 to-teal-800", "from-amber-600 to-orange-800"];
-
-function OrbBackground() {
-  const mountRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const mount = mountRef.current!;
-    const W = mount.clientWidth, H = mount.clientHeight;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
-    camera.position.z = 8;
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
-    renderer.setSize(W, H); renderer.setPixelRatio(1);
-    mount.appendChild(renderer.domElement);
-
-    const orbData: { mesh: THREE.Mesh; speed: number; offset: number }[] = [];
-    const orbColors = [0x7c3aed, 0x06b6d4, 0xa78bfa, 0x4c1d95, 0x0e7490];
-    for (let i = 0; i < 12; i++) {
-      const r = 0.15 + Math.random() * 0.35;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(r, 16, 16),
-        new THREE.MeshBasicMaterial({ color: orbColors[i % orbColors.length], transparent: true, opacity: 0.06 + Math.random() * 0.08 })
-      );
-      mesh.position.set((Math.random() - 0.5) * 18, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 4);
-      scene.add(mesh);
-      orbData.push({ mesh, speed: 0.003 + Math.random() * 0.005, offset: Math.random() * Math.PI * 2 });
-    }
-
-    const starCount = 300;
-    const starPos = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount * 3; i++) starPos[i] = (Math.random() - 0.5) * 30;
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.025, transparent: true, opacity: 0.3 })));
-
-    orbData.forEach((a, i) => {
-      if (i % 3 !== 0) return;
-      const b = orbData[(i + 3) % orbData.length];
-      const curve = new THREE.QuadraticBezierCurve3(a.mesh.position.clone(), new THREE.Vector3(0, 0, 0), b.mesh.position.clone());
-      const g = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
-      scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.05 })));
-    });
-
-    let t = 0, animId: number;
-    const animate = () => {
-      animId = requestAnimationFrame(animate);
-      t += 0.01;
-      orbData.forEach(({ mesh, speed, offset }) => {
-        mesh.position.y += Math.sin(t * speed * 60 + offset) * 0.003;
-        mesh.position.x += Math.cos(t * speed * 40 + offset) * 0.002;
-      });
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    const onResize = () => {
-      const nw = mount.clientWidth, nh = mount.clientHeight;
-      camera.aspect = nw / nh; camera.updateProjectionMatrix(); renderer.setSize(nw, nh);
-    };
-    window.addEventListener("resize", onResize);
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); renderer.dispose(); if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement); };
-  }, []);
-  return <div ref={mountRef} className="absolute inset-0 pointer-events-none" />;
-}
 
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -104,18 +43,6 @@ function Stars({ count }: { count: number }) {
   );
 }
 
-function normalize(t: any): Testimonial {
-  return {
-    id: t.id,
-    name: t.name ?? "",
-    role: t.role ?? "",
-    company: t.company ?? "",
-    rating: t.rating ?? 5,
-    text: t.review_text ?? t.review ?? t.text ?? "",
-    status: t.status ?? "",
-  };
-}
-
 export default function TestimonialsView() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -127,7 +54,14 @@ export default function TestimonialsView() {
     try {
       const data = await getTestimonials(page);
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setTestimonials(raw.map(normalize));
+      setTestimonials(raw.map((t: any) => ({
+        id: t.id,
+        name: t.name ?? "",
+        role: t.role ?? "",
+        company: t.company ?? "",
+        rating: t.rating ?? 5,
+        text: t.review_text ?? t.review ?? t.text ?? "",
+      })));
       setPagination(data.pagination ?? null);
     } finally {
       setLoading(false);
@@ -186,15 +120,11 @@ export default function TestimonialsView() {
             </div>
           </Reveal>
 
-          {loading && (
-            <div className="flex justify-center py-24 text-gray-400">Loading testimonials...</div>
-          )}
+          {loading && <div className="flex justify-center py-24 text-gray-400">Loading testimonials...</div>}
 
           {!loading && (
             <>
-              {testimonials.length === 0 && (
-                <div className="text-center py-24 text-gray-400">No testimonials found.</div>
-              )}
+              {testimonials.length === 0 && <div className="text-center py-24 text-gray-400">No testimonials found.</div>}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {testimonials.map((t, i) => {
                   const initials = t.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();

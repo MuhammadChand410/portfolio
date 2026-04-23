@@ -1,11 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import HeroSection from "./HeroSection";
-import AboutSection from "./AboutSection";
-import ServicesSection from "./ServicesSection";
-import ProjectsSection from "./ProjectsSection";
-import TestimonialsSection from "./TestimonialsSection";
-import ContactSection from "./ContactSection";
+
+const AboutSection = dynamic(() => import("./AboutSection"), { ssr: false });
+const ServicesSection = dynamic(() => import("./ServicesSection"), { ssr: false });
+const ProjectsSection = dynamic(() => import("./ProjectsSection"), { ssr: false });
+const TestimonialsSection = dynamic(() => import("./TestimonialsSection"), { ssr: false });
+const ContactSection = dynamic(() => import("./ContactSection"), { ssr: false });
 
 export default function HomeView() {
   return (
