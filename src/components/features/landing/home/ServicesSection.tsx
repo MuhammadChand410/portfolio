@@ -29,7 +29,7 @@ export default function ServicesSection() {
   useEffect(() => {
     getServices().then(data => {
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setServices(raw.map((s: any) => ({
+      setServices(raw.filter((s: any) => s.visible).map((s: any) => ({
         id: s.id,
         title: s.title ?? "",
         description: s.description ?? "",

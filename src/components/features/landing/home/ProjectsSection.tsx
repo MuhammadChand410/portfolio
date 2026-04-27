@@ -21,7 +21,7 @@ export default function ProjectsSection() {
   useEffect(() => {
     getPortfolios().then(data => {
       const raw = Array.isArray(data) ? data : data.results ?? [];
-      setProjects(raw.slice(0, 4).map((p: any) => ({
+      setProjects(raw.slice(0,4).map((p: any) => ({
         id: p.id,
         title: p.title ?? "",
         desc: p.description ?? p.desc ?? "",
